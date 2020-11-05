@@ -54,7 +54,7 @@ const getMessages = (group, low, high) => {
 
     if (!low) {
       // Default low date: one day in the past
-      low = new Date(now - 86400000);
+      low = new Date(now - 8640000000);
     }
 
     if (!high) {
@@ -93,7 +93,7 @@ const finalize = (context, response) => {
 
 // Checks that a user is a member of the group they try to access
 const groupGuard = (event, response, user) => {
-  if (!user.groups.includes(event.path.slice(1))) {
+  if (!user.groups || !user.groups.includes(event.path.slice(1))) {
     response.result.insufficientPermissions = true;
     response.result.message = "Invalid group id";
     response.status = 401;

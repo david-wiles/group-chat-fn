@@ -1,4 +1,4 @@
-const http = require("http");
+const https = require("https");
 const jwt = require("jsonwebtoken");
 const {mongo} = require("./mongo");
 
@@ -12,11 +12,11 @@ exports.authenticate = (event) => {
     else {
       let [type, token] = (event.headers.authorization || "").split(" ");
       if (type.toLowerCase() === "basic") {
-        let req = http.request({
+        let req = https.request({
           method: "GET",
           hostname: process.env.AUTH_SERVICE_HOST,
-          // TEST
-          port: 8000,
+          path: process.env.AUTH_SERVICE_PATH,
+          port: 443,
           headers: {
             "Authorization": event.headers.authorization
           }
@@ -42,11 +42,13 @@ exports.authenticate = (event) => {
   });
 };
 
-const updateUser = (user) => {
+const updateUser = (event, user) => {
   return new Promise((resolve, reject) => {
-    let req = http.request({
+    let req = https.request({
       method: "POST",
       hostname: process.env.AUTH_SERVICE_HOST,
+      path: process.env.AUTH_SERVICE_PATH,
+      port: 443,
       headers: {
         "Authorization": event.headers.authorization
       }
@@ -56,7 +58,7 @@ const updateUser = (user) => {
       res.on("data", (chunk) => {
         body += chunk;
       });
-      res.on("end", () => resolve(JSON.parse(bdoy)));
+      res.on("end", () => resolve(JSON.parse(body)));
     });
 
     req.write(user);
@@ -73,11 +75,15 @@ const updateUser = (user) => {
  * @returns {Promise<>}
  */
 const addToGroup = (event, groupId, user) => {
+  if (!user.groups) {
+    user.groups = [];
+  }
+
   if (!user.groups.includes(groupId)) {
     user.groups.push(groupId);
   }
 
-  return updateUser(user);
+  return updateUser(event, JSON.stringify(user));
 };
 exports.addToGroup = addToGroup;
 
@@ -96,7 +102,7 @@ exports.createGroup = (event, user) => {
           else {
             // Check if the group id already exists as a collection.
             // If not, then create the collection and add to the user's list of groups
-            if (!cols.includes(event.body.groupId.slice(1))) {
+            if (!cols.includes(event.body.groupId)){
               db.createCollection(event.body.groupId, (err) => {
                 if (err) reject(err);
                 else {
